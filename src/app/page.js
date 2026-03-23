@@ -13,6 +13,22 @@ export default function App() {
   const [realPosts, setRealPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // ตั้งค่าชื่อแท็บและไอคอนเว็บไซต์
+  useEffect(() => {
+    // แก้ไขชื่อแท็บ
+    document.title = "NTI Broker";
+    
+    // แก้ไขไอคอนเว็บไซต์ (Favicon)
+    let link = document.querySelector("link[rel~='icon']");
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.getElementsByTagName('head')[0].appendChild(link);
+    }
+    // ใช้รูปภาพที่อัปโหลด (อ้างอิงจากชื่อไฟล์ favicon.ico ในระบบ)
+    link.href = 'favicon.ico';
+  }, []);
+
   // ดึงข้อมูลจาก Sanity
   useEffect(() => {
     const fetchSanityPosts = async () => {
@@ -188,7 +204,14 @@ export default function App() {
               <div className="flex flex-wrap justify-center items-center gap-4 md:gap-8">
                 {partnerLogos.map((logo, idx) => (
                   <div key={idx} className="w-20 h-20 md:w-28 md:h-28 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center p-3 hover:scale-105 transition-all">
-                    <img src={logo.src} alt={logo.name} className="max-h-full max-w-full object-contain" />
+                    {/* Fallback to text if image fails */}
+                    <img 
+                      src={logo.src} 
+                      alt={logo.name} 
+                      className="max-h-full max-w-full object-contain" 
+                      onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
+                    />
+                    <span className="hidden text-[10px] text-slate-400">{logo.name}</span>
                   </div>
                 ))}
               </div>
