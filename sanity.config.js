@@ -1,28 +1,33 @@
-'use client'
-
-/**
- * This configuration is used to for the Sanity Studio that’s mounted on the `\src\app\studio\[[...tool]]\page.jsx` route
- */
-
-import {visionTool} from '@sanity/vision'
-import {defineConfig} from 'sanity'
-import {structureTool} from 'sanity/structure'
-
-// Go to https://www.sanity.io/docs/api-versioning to learn how API versioning works
-import {apiVersion, dataset, projectId} from './src/sanity/env'
-import {schema} from './src/sanity/schemaTypes'
-import {structure} from './src/sanity/structure'
+import { defineConfig } from 'sanity'
+import { structureTool } from 'sanity/structure'
+import { visionTool } from '@sanity/vision'
 
 export default defineConfig({
+  name: 'default',
+  title: 'NTI Broker Studio',
+
+  // ตรวจสอบให้แน่ใจว่า Project ID นี้ตรงกับในหน้า manage.sanity.io ของคุณ
+  projectId: '03ujtiwn', 
+  dataset: 'production',
   basePath: '/studio',
-  projectId,
-  dataset,
-  // Add and edit the content schema in the './sanity/schemaTypes' folder
-  schema,
-  plugins: [
-    structureTool({structure}),
-    // Vision is for querying with GROQ from inside the Studio
-    // https://www.sanity.io/docs/the-vision-plugin
-    visionTool({defaultApiVersion: apiVersion}),
-  ],
+
+  plugins: [structureTool(), visionTool()],
+
+  schema: {
+    types: [
+      {
+        name: 'post',
+        type: 'document',
+        title: 'บทความ',
+        fields: [
+          { name: 'title', type: 'string', title: 'หัวข้อ' },
+          { name: 'slug', type: 'slug', title: 'ลิ้งก์บทความ (Slug)', options: { source: 'title' } },
+          { name: 'mainImage', type: 'image', title: 'รูปหน้าปก', options: { hotspot: true } },
+          { name: 'publishedAt', type: 'datetime', title: 'วันที่เผยแพร่' },
+          { name: 'excerpt', type: 'text', title: 'เนื้อหาย่อ' },
+          { name: 'body', type: 'array', title: 'เนื้อหาหลัก', of: [{ type: 'block' }] }
+        ]
+      }
+    ],
+  },
 })
