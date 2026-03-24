@@ -15,17 +15,13 @@ export default function App() {
 
   // ตั้งค่าชื่อแท็บและไอคอนเว็บไซต์
   useEffect(() => {
-    // แก้ไขชื่อแท็บ
     document.title = "NTI Broker";
-    
-    // แก้ไขไอคอนเว็บไซต์ (Favicon)
     let link = document.querySelector("link[rel~='icon']");
     if (!link) {
       link = document.createElement('link');
       link.rel = 'icon';
       document.getElementsByTagName('head')[0].appendChild(link);
     }
-    // ใช้รูปภาพที่อัปโหลด (อ้างอิงจากชื่อไฟล์ favicon.ico ในระบบ)
     link.href = 'favicon.ico';
   }, []);
 
@@ -53,18 +49,51 @@ export default function App() {
 
   useEffect(() => { window.scrollTo(0, 0); }, [activeView, selectedArticle]);
 
+  // นำฟังก์ชันอัปเกรดมาใช้แทน เพื่อให้อ่าน "ลิงก์" และ "ตัวหนา" ได้ โดยไม่ต้องพึ่งไลบรารีภายนอก
   const renderBodyContent = (body) => {
     if (!body || !Array.isArray(body)) return "<p>ไม่มีเนื้อหา</p>";
+    
     return body.map(block => {
       if (block._type !== 'block' || !block.children) return '';
+      
+      // ดึงข้อมูลลิงก์ที่ถูกฝังไว้ (markDefs) ออกมาเตรียมรอไว้
+      const markDefs = (block.markDefs || []).reduce((acc, def) => {
+        acc[def._key] = def;
+        return acc;
+      }, {});
+
       const text = block.children.map(child => {
         let t = child.text;
-        if (child.marks && child.marks.includes('strong')) t = `<strong>${t}</strong>`;
+        
+        // ถ้าข้อความมีการจัดรูปแบบ (มีลิงก์, ตัวหนา, ตัวเอียง)
+        if (child.marks && child.marks.length > 0) {
+          let isLink = false;
+          let href = '';
+
+          child.marks.forEach(markKey => {
+            if (markKey === 'strong') t = `<strong>${t}</strong>`;
+            if (markKey === 'em') t = `<em>${t}</em>`;
+            if (markKey === 'underline') t = `<u>${t}</u>`;
+            
+            // เช็คว่า markKey นี้ตรงกับ ID ของลิงก์ใน markDefs หรือไม่
+            if (markDefs[markKey] && markDefs[markKey]._type === 'link') {
+              isLink = true;
+              href = markDefs[markKey].href;
+            }
+          });
+
+          // ถ้าเป็นลิงก์ ให้ครอบด้วยแท็ก <a>
+          if (isLink) {
+            const rel = !href.startsWith('/') ? 'noreferrer noopener' : '';
+            t = `<a href="${href}" target="_blank" rel="${rel}" class="text-blue-600 underline hover:text-blue-800 font-medium">${t}</a>`;
+          }
+        }
         return t;
       }).join('');
-      if (block.style === 'h2') return `<h2 class="text-2xl font-bold mt-8 mb-4">${text}</h2>`;
-      if (block.style === 'h3') return `<h3 class="text-xl font-bold mt-6 mb-3">${text}</h3>`;
-      return `<p class="mb-4">${text}</p>`;
+
+      if (block.style === 'h2') return `<h2 class="text-2xl font-bold mt-8 mb-4 text-[#0f204b]">${text}</h2>`;
+      if (block.style === 'h3') return `<h3 class="text-xl font-bold mt-6 mb-3 text-[#0f204b]">${text}</h3>`;
+      return `<p class="mb-4 text-slate-700 leading-relaxed">${text}</p>`;
     }).join('');
   };
 
@@ -133,7 +162,10 @@ export default function App() {
             <img src={selectedArticle.imageUrl} alt={selectedArticle.title} className="w-full h-[300px] md:h-[450px] object-cover" />
           </div>
         )}
-        <div className="prose prose-lg max-w-none text-slate-700" dangerouslySetInnerHTML={{ __html: renderBodyContent(selectedArticle.body) }} />
+        
+        {/* นำฟังก์ชัน renderBodyContent ที่อัปเกรดแล้วกลับมาใช้งาน */}
+        <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: renderBodyContent(selectedArticle.body) }} />
+
         <div className="mt-16 bg-blue-50 border border-blue-100 rounded-2xl p-8 text-center">
           <h3 className="text-2xl font-bold text-[#0f204b] mb-4">ต้องการคำปรึกษาเพิ่มเติม?</h3>
           <a href={lineUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-[#00B900] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#009900] transition shadow-lg">
