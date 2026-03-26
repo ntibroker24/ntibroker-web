@@ -20,7 +20,9 @@ async function getPost(slug) {
 
 // 2. ฟังก์ชันบอก Facebook ว่าหน้านี้คือรูปอะไร
 export async function generateMetadata({ params }) {
-  const post = await getPost(params.slug);
+  // แก้ไข: เพิ่ม await เพื่อรอให้ Next.js 15 อ่านพารามิเตอร์เสร็จก่อน
+  const resolvedParams = await params;
+  const post = await getPost(resolvedParams.slug);
   
   if (!post) {
     return { title: 'ไม่พบบทความ | NTI Broker' };
@@ -88,7 +90,9 @@ const renderBodyContent = (body) => {
 
 // 4. หน้าตาของบทความ
 export default async function ArticlePage({ params }) {
-  const post = await getPost(params.slug);
+  // แก้ไข: เพิ่ม await เพื่อรอให้ Next.js 15 อ่านพารามิเตอร์เสร็จก่อน
+  const resolvedParams = await params;
+  const post = await getPost(resolvedParams.slug);
 
   if (!post) {
     return (
