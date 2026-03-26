@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, Car, Flame, Home as HomeIcon, Store, Hammer, HardHat, Truck, Heart, 
   PiggyBank, Activity, ShieldAlert, ChevronRight, MessageCircle, Menu, 
-  X, Umbrella, Plane, Calendar, ArrowLeft, Tag, BookOpen
+  X, Umbrella, Plane, Calendar, ArrowLeft, Tag, BookOpen, Facebook
 } from 'lucide-react';
 
 export default function App() {
@@ -37,7 +37,9 @@ export default function App() {
       try {
         const res = await fetch(url);
         const data = await res.json();
-        if (data.result) setRealPosts(data.result);
+        if (data.result) {
+          setRealPosts(data.result);
+        }
       } catch (err) {
         console.error("ดึงข้อมูลไม่สำเร็จ:", err);
       } finally {
@@ -46,6 +48,21 @@ export default function App() {
     };
     fetchSanityPosts();
   }, []);
+
+  // ระบบตรวจสอบ URL ว่ามี ?article=... หรือไม่ เพื่อเปิดหน้าบทความอัตโนมัติ (สำหรับคนกดมาจาก Facebook)
+  useEffect(() => {
+    if (realPosts.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const articleSlug = params.get('article');
+      if (articleSlug) {
+        const foundArticle = realPosts.find(p => p.slug === articleSlug);
+        if (foundArticle) {
+          setSelectedArticle(foundArticle);
+          setActiveView('article');
+        }
+      }
+    }
+  }, [realPosts]);
 
   useEffect(() => { window.scrollTo(0, 0); }, [activeView, selectedArticle]);
 
@@ -129,52 +146,71 @@ export default function App() {
 
   const lineUrl = "https://line.me/R/ti/p/@ntibroker";
 
+  // ฟังก์ชันกดอ่านบทความ (เพิ่มการเปลี่ยน URL)
   const handleReadArticle = (article) => {
     setSelectedArticle(article);
     setActiveView('article');
+    if (article.slug) {
+      window.history.pushState({}, '', `?article=${article.slug}`);
+    }
+    window.scrollTo(0, 0);
   };
 
+  // ฟังก์ชันกลับหน้าหลัก (ลบ URL บทความออก)
   const handleBackToHome = () => {
     setActiveView('home');
     setSelectedArticle(null);
+    window.history.pushState({}, '', window.location.pathname);
+    window.scrollTo(0, 0);
   };
 
-  const ArticleView = () => (
-    <div className="bg-white min-h-screen pb-20">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-        <button onClick={handleBackToHome} className="flex items-center gap-2 text-slate-500 hover:text-blue-600 font-medium mb-8 transition-colors">
-          <ArrowLeft className="w-5 h-5" /><span>กลับไปหน้าหลัก</span>
-        </button>
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4 text-sm">
-            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium flex items-center gap-1">
-              <Tag className="w-4 h-4" /> บทความน่ารู้
-            </span>
-            <span className="text-slate-500 flex items-center gap-1">
-              <Calendar className="w-4 h-4" /> 
-              {selectedArticle.publishedAt ? new Date(selectedArticle.publishedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }) : 'ไม่ระบุวันที่'}
-            </span>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-[#0f204b] leading-tight mb-6">{selectedArticle.title}</h1>
-        </div>
-        {selectedArticle.imageUrl && (
-          <div className="rounded-2xl overflow-hidden mb-10 shadow-md bg-slate-100">
-            <img src={selectedArticle.imageUrl} alt={selectedArticle.title} className="w-full h-[300px] md:h-[450px] object-cover" />
-          </div>
-        )}
-        
-        {/* นำฟังก์ชัน renderBodyContent ที่อัปเกรดแล้วกลับมาใช้งาน */}
-        <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: renderBodyContent(selectedArticle.body) }} />
+  const ArticleView = () => {
+    // สร้างลิ้งก์สำหรับแชร์ไป Facebook
+    const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+    const fbShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
 
-        <div className="mt-16 bg-blue-50 border border-blue-100 rounded-2xl p-8 text-center">
-          <h3 className="text-2xl font-bold text-[#0f204b] mb-4">ต้องการคำปรึกษาเพิ่มเติม?</h3>
-          <a href={lineUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-[#00B900] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#009900] transition shadow-lg">
-            <MessageCircle className="w-6 h-6" />ปรึกษาผ่าน LINE ฟรี
-          </a>
+    return (
+      <div className="bg-white min-h-screen pb-20">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+          <button onClick={handleBackToHome} className="flex items-center gap-2 text-slate-500 hover:text-blue-600 font-medium mb-8 transition-colors">
+            <ArrowLeft className="w-5 h-5" /><span>กลับไปหน้าหลัก</span>
+          </button>
+          <div className="mb-8">
+            <div className="flex items-center gap-4 mb-4 text-sm">
+              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium flex items-center gap-1">
+                <Tag className="w-4 h-4" /> บทความน่ารู้
+              </span>
+              <span className="text-slate-500 flex items-center gap-1">
+                <Calendar className="w-4 h-4" /> 
+                {selectedArticle.publishedAt ? new Date(selectedArticle.publishedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }) : 'ไม่ระบุวันที่'}
+              </span>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-[#0f204b] leading-tight mb-6">{selectedArticle.title}</h1>
+          </div>
+          {selectedArticle.imageUrl && (
+            <div className="rounded-2xl overflow-hidden mb-10 shadow-md bg-slate-100">
+              <img src={selectedArticle.imageUrl} alt={selectedArticle.title} className="w-full h-[300px] md:h-[450px] object-cover" />
+            </div>
+          )}
+          <div className="prose prose-lg max-w-none text-slate-700" dangerouslySetInnerHTML={{ __html: renderBodyContent(selectedArticle.body) }} />
+          
+          {/* กล่องแชร์และติดต่อ (อัปเดตใหม่) */}
+          <div className="mt-16 bg-blue-50 border border-blue-100 rounded-2xl p-8 text-center">
+            <h3 className="text-2xl font-bold text-[#0f204b] mb-6">ชอบบทความนี้ หรือต้องการคำปรึกษา?</h3>
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+              <a href={fbShareUrl} target="_blank" rel="noreferrer" className="w-full sm:w-auto inline-flex justify-center items-center gap-2 bg-[#1877F2] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#166fe5] transition shadow-lg">
+                <Facebook className="w-6 h-6" /> แชร์ไปที่ Facebook
+              </a>
+              <a href={lineUrl} target="_blank" rel="noreferrer" className="w-full sm:w-auto inline-flex justify-center items-center gap-2 bg-[#00B900] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#009900] transition shadow-lg">
+                <MessageCircle className="w-6 h-6" /> ปรึกษาผ่าน LINE ฟรี
+              </a>
+            </div>
+          </div>
+
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
@@ -236,14 +272,7 @@ export default function App() {
               <div className="flex flex-wrap justify-center items-center gap-4 md:gap-8">
                 {partnerLogos.map((logo, idx) => (
                   <div key={idx} className="w-20 h-20 md:w-28 md:h-28 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center p-3 hover:scale-105 transition-all">
-                    {/* Fallback to text if image fails */}
-                    <img 
-                      src={logo.src} 
-                      alt={logo.name} 
-                      className="max-h-full max-w-full object-contain" 
-                      onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
-                    />
-                    <span className="hidden text-[10px] text-slate-400">{logo.name}</span>
+                    <img src={logo.src} alt={logo.name} className="max-h-full max-w-full object-contain" />
                   </div>
                 ))}
               </div>
