@@ -13,18 +13,6 @@ export default function App() {
   const [realPosts, setRealPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ตั้งค่าชื่อแท็บและไอคอนเว็บไซต์
-  useEffect(() => {
-    document.title = "NTI Broker";
-    let link = document.querySelector("link[rel~='icon']");
-    if (!link) {
-      link = document.createElement('link');
-      link.rel = 'icon';
-      document.getElementsByTagName('head')[0].appendChild(link);
-    }
-    link.href = 'favicon.ico';
-  }, []);
-
   // ดึงข้อมูลจาก Sanity
   useEffect(() => {
     const fetchSanityPosts = async () => {
@@ -64,16 +52,16 @@ export default function App() {
     }
   }, [realPosts]);
 
+  // เลื่อนจอขึ้นบนสุดเมื่อเปลี่ยนหน้า
   useEffect(() => { window.scrollTo(0, 0); }, [activeView, selectedArticle]);
 
-  // นำฟังก์ชันอัปเกรดมาใช้แทน เพื่อให้อ่าน "ลิงก์" และ "ตัวหนา" ได้ โดยไม่ต้องพึ่งไลบรารีภายนอก
+  // ฟังก์ชันแสดงผลเนื้อหา (รองรับลิงก์ ตัวหนา ตัวเอียง)
   const renderBodyContent = (body) => {
     if (!body || !Array.isArray(body)) return "<p>ไม่มีเนื้อหา</p>";
     
     return body.map(block => {
       if (block._type !== 'block' || !block.children) return '';
       
-      // ดึงข้อมูลลิงก์ที่ถูกฝังไว้ (markDefs) ออกมาเตรียมรอไว้
       const markDefs = (block.markDefs || []).reduce((acc, def) => {
         acc[def._key] = def;
         return acc;
@@ -82,7 +70,6 @@ export default function App() {
       const text = block.children.map(child => {
         let t = child.text;
         
-        // ถ้าข้อความมีการจัดรูปแบบ (มีลิงก์, ตัวหนา, ตัวเอียง)
         if (child.marks && child.marks.length > 0) {
           let isLink = false;
           let href = '';
@@ -92,14 +79,12 @@ export default function App() {
             if (markKey === 'em') t = `<em>${t}</em>`;
             if (markKey === 'underline') t = `<u>${t}</u>`;
             
-            // เช็คว่า markKey นี้ตรงกับ ID ของลิงก์ใน markDefs หรือไม่
             if (markDefs[markKey] && markDefs[markKey]._type === 'link') {
               isLink = true;
               href = markDefs[markKey].href;
             }
           });
 
-          // ถ้าเป็นลิงก์ ให้ครอบด้วยแท็ก <a>
           if (isLink) {
             const rel = !href.startsWith('/') ? 'noreferrer noopener' : '';
             t = `<a href="${href}" target="_blank" rel="${rel}" class="text-blue-600 underline hover:text-blue-800 font-medium">${t}</a>`;
@@ -146,7 +131,6 @@ export default function App() {
 
   const lineUrl = "https://line.me/R/ti/p/@ntibroker";
 
-  // ฟังก์ชันกดอ่านบทความ (เพิ่มการเปลี่ยน URL)
   const handleReadArticle = (article) => {
     setSelectedArticle(article);
     setActiveView('article');
@@ -156,7 +140,6 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
-  // ฟังก์ชันกลับหน้าหลัก (ลบ URL บทความออก)
   const handleBackToHome = () => {
     setActiveView('home');
     setSelectedArticle(null);
@@ -165,7 +148,6 @@ export default function App() {
   };
 
   const ArticleView = () => {
-    // สร้างลิ้งก์สำหรับแชร์ไป Facebook
     const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
     const fbShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
 
@@ -175,6 +157,7 @@ export default function App() {
           <button onClick={handleBackToHome} className="flex items-center gap-2 text-slate-500 hover:text-blue-600 font-medium mb-8 transition-colors">
             <ArrowLeft className="w-5 h-5" /><span>กลับไปหน้าหลัก</span>
           </button>
+          
           <div className="mb-8">
             <div className="flex items-center gap-4 mb-4 text-sm">
               <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium flex items-center gap-1">
@@ -187,21 +170,23 @@ export default function App() {
             </div>
             <h1 className="text-3xl md:text-4xl font-bold text-[#0f204b] leading-tight mb-6">{selectedArticle.title}</h1>
           </div>
+          
           {selectedArticle.imageUrl && (
             <div className="rounded-2xl overflow-hidden mb-10 shadow-md bg-slate-100">
               <img src={selectedArticle.imageUrl} alt={selectedArticle.title} className="w-full h-[300px] md:h-[450px] object-cover" />
             </div>
           )}
+          
           <div className="prose prose-lg max-w-none text-slate-700" dangerouslySetInnerHTML={{ __html: renderBodyContent(selectedArticle.body) }} />
           
-          {/* กล่องแชร์และติดต่อ (อัปเดตใหม่) */}
-          <div className="mt-16 bg-blue-50 border border-blue-100 rounded-2xl p-8 text-center">
+          {/* กล่องแชร์และติดต่อ */}
+          <div className="mt-16 bg-blue-50 border border-blue-100 rounded-2xl p-8 text-center shadow-sm">
             <h3 className="text-2xl font-bold text-[#0f204b] mb-6">ชอบบทความนี้ หรือต้องการคำปรึกษา?</h3>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-              <a href={fbShareUrl} target="_blank" rel="noreferrer" className="w-full sm:w-auto inline-flex justify-center items-center gap-2 bg-[#1877F2] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#166fe5] transition shadow-lg">
+              <a href={fbShareUrl} target="_blank" rel="noreferrer" className="w-full sm:w-auto inline-flex justify-center items-center gap-2 bg-[#1877F2] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#166fe5] transition shadow-md hover:shadow-lg">
                 <Facebook className="w-6 h-6" /> แชร์ไปที่ Facebook
               </a>
-              <a href={lineUrl} target="_blank" rel="noreferrer" className="w-full sm:w-auto inline-flex justify-center items-center gap-2 bg-[#00B900] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#009900] transition shadow-lg">
+              <a href={lineUrl} target="_blank" rel="noreferrer" className="w-full sm:w-auto inline-flex justify-center items-center gap-2 bg-[#00B900] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#009900] transition shadow-md hover:shadow-lg">
                 <MessageCircle className="w-6 h-6" /> ปรึกษาผ่าน LINE ฟรี
               </a>
             </div>
@@ -214,6 +199,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+      {/* Navbar */}
       <nav className="bg-[#0f204b] text-white sticky top-0 z-50 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20">
@@ -228,7 +214,7 @@ export default function App() {
               <button onClick={() => {handleBackToHome(); setTimeout(()=>document.getElementById('buy-online')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="hover:text-blue-300 transition text-sm font-medium">ซื้อออนไลน์</button>
               <button onClick={() => {handleBackToHome(); setTimeout(()=>document.getElementById('services')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="hover:text-blue-300 transition text-sm font-medium">บริการของเรา</button>
               <button onClick={() => {handleBackToHome(); setTimeout(()=>document.getElementById('blog')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="hover:text-blue-300 transition text-sm font-medium">บทความ</button>
-              <a href={lineUrl} target="_blank" rel="noreferrer" className="bg-[#00B900] hover:bg-[#009900] text-white px-5 py-2 rounded-full font-medium flex items-center gap-2 transition shadow-md">
+              <a href={lineUrl} target="_blank" rel="noreferrer" className="bg-[#00B900] hover:bg-[#009900] text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 transition shadow-md">
                 <MessageCircle className="w-5 h-5" /><span>@ntibroker</span>
               </a>
             </div>
@@ -240,7 +226,7 @@ export default function App() {
           </div>
         </div>
         {isMenuOpen && (
-          <div className="md:hidden bg-[#0a1532] border-t border-slate-700 px-2 pt-2 pb-4 space-y-1">
+          <div className="md:hidden bg-[#0a1532] border-t border-slate-700 px-2 pt-2 pb-4 space-y-1 absolute w-full shadow-xl">
             <button onClick={() => {handleBackToHome(); setIsMenuOpen(false);}} className="w-full text-left block px-3 py-3 rounded-md text-base font-medium hover:bg-slate-800">หน้าแรก</button>
             <button onClick={() => {handleBackToHome(); setIsMenuOpen(false); setTimeout(()=>document.getElementById('buy-online')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="w-full text-left block px-3 py-3 rounded-md text-base font-medium hover:bg-slate-800">ซื้อออนไลน์</button>
             <button onClick={() => {handleBackToHome(); setIsMenuOpen(false); setTimeout(()=>document.getElementById('services')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="w-full text-left block px-3 py-3 rounded-md text-base font-medium hover:bg-slate-800">บริการของเรา</button>
@@ -253,47 +239,63 @@ export default function App() {
         <ArticleView />
       ) : (
         <>
-          <section id="home" className="relative bg-[#0f204b] text-white py-16 lg:py-24 px-4 overflow-hidden">
-            <div className="max-w-7xl mx-auto relative z-10">
-              <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">ที่ปรึกษาประกันภัย <br/><span className="text-blue-400">ที่คุณวางใจได้</span></h1>
-              <p className="text-lg md:text-xl mb-10 text-slate-300 max-w-2xl">ซื้อประกันออนไลน์ด้วยตนเองจากบริษัทชั้นนำ หรือรับคำปรึกษาจากทีมงานผู้เชี่ยวชาญ เพื่อให้ได้ความคุ้มครองที่ตอบโจทย์คุณที่สุด</p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button onClick={() => document.getElementById('buy-online')?.scrollIntoView({behavior: 'smooth'})} className="bg-white text-[#0f204b] px-8 py-4 rounded-lg font-bold hover:bg-slate-100 transition shadow-lg">ซื้อประกันออนไลน์</button>
-                <a href={lineUrl} target="_blank" rel="noreferrer" className="bg-[#00B900] text-white px-8 py-4 rounded-lg font-bold text-center hover:bg-[#009900] transition shadow-lg flex justify-center items-center gap-2">
-                  <MessageCircle className="w-6 h-6" />ปรึกษาผ่าน LINE
-                </a>
+          {/* Hero Section (อัปเกรดพื้นหลัง) */}
+          <section id="home" className="relative bg-[#0f204b] text-white overflow-hidden">
+            <div className="absolute inset-0 opacity-10">
+              <svg className="absolute right-0 top-0 h-full w-1/2 transform translate-x-1/3" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <polygon fill="currentColor" points="0,0 100,0 100,100 0,100 20,50" />
+              </svg>
+            </div>
+            
+            <div className="max-w-7xl mx-auto relative z-10 py-16 lg:py-24 px-4 sm:px-6 lg:px-8">
+              <div className="lg:w-2/3">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+                  ที่ปรึกษาประกันภัย <br/><span className="text-blue-400">ที่คุณวางใจได้</span>
+                </h1>
+                <p className="text-lg md:text-xl mb-10 text-slate-300 font-light max-w-2xl">
+                  ซื้อประกันออนไลน์ด้วยตนเองจากบริษัทชั้นนำ หรือรับคำปรึกษาจากทีมงานผู้เชี่ยวชาญ เพื่อให้ได้ความคุ้มครองที่ตอบโจทย์คุณที่สุด
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button onClick={() => document.getElementById('buy-online')?.scrollIntoView({behavior: 'smooth'})} className="bg-white text-[#0f204b] px-8 py-4 rounded-lg font-bold hover:bg-slate-100 transition shadow-lg">ซื้อประกันออนไลน์</button>
+                  <a href={lineUrl} target="_blank" rel="noreferrer" className="bg-[#00B900] text-white px-8 py-4 rounded-lg font-bold text-center hover:bg-[#009900] transition shadow-lg flex justify-center items-center gap-2">
+                    <MessageCircle className="w-6 h-6" />ปรึกษาผ่าน LINE
+                  </a>
+                </div>
               </div>
             </div>
           </section>
 
+          {/* Partners Banner */}
           <section className="py-10 bg-white border-b border-slate-200">
-            <div className="max-w-7xl mx-auto px-4">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <p className="text-center text-sm font-semibold text-slate-400 tracking-wider mb-8 uppercase">พันธมิตรประกันภัยที่เราไว้วางใจ</p>
               <div className="flex flex-wrap justify-center items-center gap-4 md:gap-8">
                 {partnerLogos.map((logo, idx) => (
-                  <div key={idx} className="w-20 h-20 md:w-28 md:h-28 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center p-3 hover:scale-105 transition-all">
-                    <img src={logo.src} alt={logo.name} className="max-h-full max-w-full object-contain" />
+                  <div key={idx} className="w-20 h-20 md:w-28 md:h-28 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center p-3 hover:scale-105 hover:shadow-md hover:border-blue-200 transition-all duration-300">
+                    <img src={logo.src} alt={logo.name} title={logo.name} className="max-h-full max-w-full object-contain" />
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
+          {/* Buy Online Section */}
           <section id="buy-online" className="py-16 md:py-24 bg-slate-50">
-            <div className="max-w-7xl mx-auto px-4">
-              <div className="text-center mb-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center max-w-3xl mx-auto mb-16">
                 <h2 className="text-3xl md:text-4xl font-bold text-[#0f204b] mb-4">ซื้อประกันออนไลน์ด้วยตนเอง</h2>
-                <div className="w-20 h-1 bg-blue-500 mx-auto"></div>
+                <div className="w-20 h-1 bg-blue-500 mx-auto mb-6"></div>
+                <p className="text-slate-600 text-lg">สะดวก รวดเร็ว ปลอดภัย เลือกซื้อประกันจากบริษัทพันธมิตรชั้นนำของเราได้ทันทีผ่านเว็บไซต์ทางการ</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {directPartners.map((partner) => (
-                  <div key={partner.id} className="bg-white border rounded-2xl shadow-sm hover:shadow-xl transition-all overflow-hidden flex flex-col">
-                    <div className={`${partner.color} h-32 flex items-center justify-center p-6`}>{partner.icon}</div>
-                    <div className="p-6 flex flex-col flex-grow">
+                  <div key={partner.id} className="bg-white border rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col group">
+                    <div className={`${partner.color} h-32 flex items-center justify-center p-6 transition-transform duration-500 group-hover:scale-105`}>{partner.icon}</div>
+                    <div className="p-6 flex flex-col flex-grow bg-white relative z-10">
                       <h3 className="text-xl font-bold text-slate-800 mb-2">{partner.name}</h3>
                       <p className="text-slate-600 mb-6 flex-grow text-sm">{partner.description}</p>
-                      <a href={partner.url} target="_blank" rel="noreferrer" className="w-full inline-flex justify-center items-center gap-2 bg-[#0f204b] text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-800 transition">
-                        <span>เช็คราคา</span><ChevronRight className="w-4 h-4" />
+                      <a href={partner.url} target="_blank" rel="noreferrer" className="w-full inline-flex justify-center items-center gap-2 bg-[#0f204b] text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-800 transition group-hover:bg-blue-700">
+                        <span>คลิกเพื่อเช็คราคา</span><ChevronRight className="w-4 h-4" />
                       </a>
                     </div>
                   </div>
@@ -302,37 +304,58 @@ export default function App() {
             </div>
           </section>
 
+          {/* Services Section */}
           <section id="services" className="py-16 md:py-24 bg-white">
-            <div className="max-w-7xl mx-auto px-4">
-              <div className="text-center mb-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center max-w-3xl mx-auto mb-16">
                 <h2 className="text-3xl md:text-4xl font-bold text-[#0f204b] mb-4">บริการประกันภัยของเรา</h2>
-                <div className="w-20 h-1 bg-blue-500 mx-auto"></div>
+                <div className="w-20 h-1 bg-blue-500 mx-auto mb-6"></div>
+                <p className="text-slate-600 text-lg">NTI Broker ให้บริการดูแลและเป็นที่ปรึกษาประกันภัยทุกประเภท เพื่อคุ้มครองทุกความเสี่ยงในชีวิตและธุรกิจของคุณ</p>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                 {products.map((product, index) => (
-                  <a key={index} href={lineUrl} target="_blank" rel="noreferrer" className="bg-slate-50 p-6 rounded-2xl border border-slate-100 hover:shadow-md hover:border-blue-200 transition-all flex flex-col items-center text-center">
-                    <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">{product.icon}</div>
+                  <a key={index} href={lineUrl} target="_blank" rel="noreferrer" className="bg-slate-50 p-6 rounded-2xl border border-slate-100 hover:shadow-md hover:border-blue-200 transition-all group flex flex-col items-center text-center cursor-pointer">
+                    <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">{product.icon}</div>
                     <h3 className="text-slate-800 font-semibold mb-2">{product.name}</h3>
+                    <p className="text-xs text-slate-500 mt-auto flex items-center gap-1 group-hover:text-blue-600 transition-colors">
+                      ปรึกษาเรา <ChevronRight className="w-3 h-3" />
+                    </p>
                   </a>
                 ))}
               </div>
             </div>
           </section>
 
-          <section id="blog" className="py-16 md:py-24 bg-slate-50 border-t">
-            <div className="max-w-7xl mx-auto px-4">
-              <h2 className="text-3xl md:text-4xl font-bold text-[#0f204b] mb-12 flex items-center gap-3"><BookOpen className="text-blue-500" /> บทความน่ารู้</h2>
-              {isLoading ? <div className="text-center py-10">กำลังโหลดบทความ...</div> : (
+          {/* Blog Section (ดึงข้อมูลจริง) */}
+          <section id="blog" className="py-16 md:py-24 bg-slate-50 border-t border-slate-100">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="mb-12">
+                <h2 className="text-3xl md:text-4xl font-bold text-[#0f204b] mb-4 flex items-center gap-3"><BookOpen className="text-blue-500 w-8 h-8" /> บทความน่ารู้</h2>
+                <div className="w-20 h-1 bg-blue-500 mb-4"></div>
+                <p className="text-slate-600 text-lg">สาระความรู้เรื่องประกันภัย และเคล็ดลับการวางแผนการเงิน</p>
+              </div>
+              
+              {isLoading ? (
+                <div className="text-center py-10 font-medium text-slate-500">กำลังโหลดบทความ...</div>
+              ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   {realPosts.map((post) => (
-                    <div key={post._id} onClick={() => handleReadArticle(post)} className="bg-white rounded-2xl border overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer group flex flex-col h-full">
-                      <div className="relative h-48 bg-slate-100">
-                        {post.imageUrl && <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />}
+                    <div key={post._id} onClick={() => handleReadArticle(post)} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer group flex flex-col h-full">
+                      <div className="relative overflow-hidden h-48 bg-slate-100">
+                        {post.imageUrl && (
+                          <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        )}
                       </div>
                       <div className="p-6 flex flex-col flex-grow">
-                        <h3 className="text-xl font-bold text-slate-800 mb-3 group-hover:text-blue-600 transition-colors">{post.title}</h3>
+                        <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" /> 
+                            {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : ''}
+                          </span>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-800 mb-3 group-hover:text-blue-600 transition-colors line-clamp-2">{post.title}</h3>
                         <p className="text-slate-600 text-sm line-clamp-3 mb-4 flex-grow">{post.excerpt}</p>
-                        <div className="text-blue-600 font-medium text-sm flex items-center gap-1">อ่านต่อ <ChevronRight className="w-4 h-4" /></div>
+                        <div className="text-blue-600 font-medium text-sm flex items-center gap-1 group-hover:gap-2 transition-all mt-auto">อ่านต่อ <ChevronRight className="w-4 h-4" /></div>
                       </div>
                     </div>
                   ))}
@@ -343,15 +366,58 @@ export default function App() {
         </>
       )}
 
-      <footer className="bg-[#0a1532] text-slate-300 py-12 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-2xl font-bold text-white mb-4">NTI Broker</p>
-          <p className="text-sm opacity-60 mb-8">โบรกเกอร์ที่ปรึกษาประกันภัยที่คุณวางใจได้</p>
-          <div className="border-t border-slate-800 pt-8 text-xs">
+      {/* Footer แบบ 3 คอลัมน์ (ดีไซน์ใหม่) */}
+      <footer className="bg-[#0a1532] text-slate-300 pt-16 pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+            <div className="col-span-1 md:col-span-1">
+              <div className="flex flex-col mb-6 cursor-pointer" onClick={handleBackToHome}>
+                <span className="text-3xl font-bold tracking-wider leading-tight text-white">NTI Broker</span>
+                <span className="text-sm font-light text-blue-300">ที่ปรึกษาประกันภัย</span>
+              </div>
+              <p className="text-sm text-slate-400 leading-relaxed mb-6">
+                โบรกเกอร์ที่ปรึกษาประกันภัยที่คุณวางใจได้ ให้บริการดูแลและแนะนำผลิตภัณฑ์ประกันภัยจากบริษัทชั้นนำ เพื่อความคุ้มครองที่คุ้มค่าที่สุดสำหรับคุณ
+              </p>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-6 uppercase tracking-wider text-sm">บริการของเรา</h4>
+              <ul className="space-y-3 text-sm">
+                <li><button onClick={() => {handleBackToHome(); setTimeout(()=>document.getElementById('buy-online')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="hover:text-white transition flex items-center gap-2"><ChevronRight className="w-4 h-4"/> ซื้อประกันออนไลน์</button></li>
+                <li><button onClick={() => {handleBackToHome(); setTimeout(()=>document.getElementById('services')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="hover:text-white transition flex items-center gap-2"><ChevronRight className="w-4 h-4"/> ประกันต่างๆ</button></li>
+                <li><button onClick={() => {handleBackToHome(); setTimeout(()=>document.getElementById('blog')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="hover:text-white transition flex items-center gap-2"><ChevronRight className="w-4 h-4"/> บทความน่ารู้</button></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-6 uppercase tracking-wider text-sm">ติดต่อเรา</h4>
+              <div className="space-y-4 text-sm">
+                <a href={lineUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 hover:text-white transition group">
+                  <div className="w-10 h-10 bg-[#00B900] rounded-full flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                    <MessageCircle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400">Line Official Account</p>
+                    <p className="font-medium text-white text-base">@ntibroker</p>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-slate-500">
             <p>&copy; {new Date().getFullYear()} NTI Broker. All rights reserved.</p>
+            <p className="mt-2 md:mt-0">เว็บไซต์สำหรับให้ข้อมูลและอำนวยความสะดวกในการติดต่อทำประกันภัย</p>
           </div>
         </div>
       </footer>
+
+      {/* Floating Line Button for Mobile (ปุ่ม LINE ลอยด้านล่าง) */}
+      <a href={lineUrl} target="_blank" rel="noreferrer" className="fixed bottom-6 right-6 md:bottom-10 md:right-10 bg-[#00B900] text-white p-4 rounded-full shadow-2xl hover:bg-[#009900] transition-all hover:scale-105 z-50 flex items-center justify-center group">
+        <MessageCircle className="w-8 h-8" />
+        <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs group-hover:ml-2 group-hover:mr-1 transition-all duration-300 font-medium">
+          สอบถามข้อมูล
+        </span>
+      </a>
+
     </div>
   );
 }
