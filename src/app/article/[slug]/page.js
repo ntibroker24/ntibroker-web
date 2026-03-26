@@ -10,7 +10,7 @@ async function getPost(slug) {
   }`);
   const url = `https://${PROJECT_ID}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=${query}`;
   try {
-    const res = await fetch(url, { next: { revalidate: 10 } }); // รีเฟรชข้อมูลทุก 10 วินาที
+    const res = await fetch(url, { next: { revalidate: 10 } }); 
     const data = await res.json();
     return data.result;
   } catch (err) {
@@ -18,7 +18,7 @@ async function getPost(slug) {
   }
 }
 
-// 2. ฟังก์ชัน "บอก Facebook" ว่าหน้านี้คือรูปอะไร (Dynamic Metadata)
+// 2. ฟังก์ชันบอก Facebook ว่าหน้านี้คือรูปอะไร
 export async function generateMetadata({ params }) {
   const post = await getPost(params.slug);
   
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }) {
       type: 'article',
       images: [
         {
-          url: post.imageUrl || 'https://ntibroker.com/logo.png', // ส่งรูปหน้าปกบทความให้ Facebook
+          url: post.imageUrl || 'https://ntibroker.com/logo.png',
           width: 1200,
           height: 630,
           alt: post.title,
@@ -48,7 +48,7 @@ export async function generateMetadata({ params }) {
   };
 }
 
-// 3. ฟังก์ชันแปลงข้อความตัวหนาและลิงก์
+// 3. ฟังก์ชันแปลงข้อความ
 const renderBodyContent = (body) => {
   if (!body || !Array.isArray(body)) return "<p>ไม่มีเนื้อหา</p>";
   return body.map(block => {
@@ -86,7 +86,7 @@ const renderBodyContent = (body) => {
   }).join('');
 };
 
-// 4. หน้าตาของหน้าอ่านบทความ
+// 4. หน้าตาของบทความ
 export default async function ArticlePage({ params }) {
   const post = await getPost(params.slug);
 
@@ -140,7 +140,6 @@ export default async function ArticlePage({ params }) {
         
         <div className="prose prose-lg max-w-none text-slate-700" dangerouslySetInnerHTML={{ __html: renderBodyContent(post.body) }} />
         
-        {/* กล่องแชร์และติดต่อ */}
         <div className="mt-16 bg-blue-50 border border-blue-100 rounded-2xl p-8 text-center shadow-sm">
           <h3 className="text-2xl font-bold text-[#0f204b] mb-6">ชอบบทความนี้ หรือต้องการคำปรึกษา?</h3>
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
