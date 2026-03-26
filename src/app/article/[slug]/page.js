@@ -1,5 +1,6 @@
 import React from 'react';
-import { ArrowLeft, Tag, Calendar, Facebook, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Tag, Calendar } from 'lucide-react';
+import ShareButtons from '../../../components/ShareButtons'; // นำเข้าปุ่มแชร์ที่เราเพิ่งสร้าง
 
 // 1. ฟังก์ชันดึงข้อมูลบทความจาก Sanity
 async function getPost(slug) {
@@ -29,6 +30,11 @@ export async function generateMetadata({ params }) {
   }
 
   const postUrl = `https://ntibroker.com/article/${post.slug}`;
+  
+  // หัวใจสำคัญ: บังคับแปลงรูปเป็น JPG และครอปให้ขนาด 1200x630 เป๊ะๆ เพื่อเอาใจ Facebook!
+  const ogImageUrl = post.imageUrl 
+    ? `${post.imageUrl}?fm=jpg&w=1200&h=630&fit=crop` 
+    : 'https://ntibroker.com/logo.png';
 
   return {
     title: `${post.title} | NTI Broker`,
@@ -40,13 +46,20 @@ export async function generateMetadata({ params }) {
       type: 'article',
       images: [
         {
-          url: post.imageUrl || 'https://ntibroker.com/logo.png',
+          url: ogImageUrl,
           width: 1200,
           height: 630,
           alt: post.title,
         },
       ],
     },
+    // แถมตั้งค่าให้แชร์ลง X (Twitter) หรือโซเชียลอื่นๆ ได้สวยงามด้วย
+    twitter: {
+      card: 'summary_large_image',
+      title: post.title,
+      description: post.excerpt,
+      images: [ogImageUrl],
+    }
   };
 }
 
@@ -104,7 +117,6 @@ export default async function ArticlePage({ params }) {
   }
 
   const shareUrl = `https://ntibroker.com/article/${post.slug}`;
-  const fbShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
   const lineUrl = "https://line.me/R/ti/p/@ntibroker";
 
   return (
@@ -144,16 +156,10 @@ export default async function ArticlePage({ params }) {
         
         <div className="prose prose-lg max-w-none text-slate-700" dangerouslySetInnerHTML={{ __html: renderBodyContent(post.body) }} />
         
+        {/* กล่องแชร์และติดต่อ (เรียกใช้งาน Component ปุ่มแชร์อัจฉริยะแทนของเก่า) */}
         <div className="mt-16 bg-blue-50 border border-blue-100 rounded-2xl p-8 text-center shadow-sm">
           <h3 className="text-2xl font-bold text-[#0f204b] mb-6">ชอบบทความนี้ หรือต้องการคำปรึกษา?</h3>
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-            <a href={fbShareUrl} target="_blank" rel="noreferrer" className="w-full sm:w-auto inline-flex justify-center items-center gap-2 bg-[#1877F2] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#166fe5] transition shadow-md hover:shadow-lg">
-              <Facebook className="w-6 h-6" /> แชร์ไปที่ Facebook
-            </a>
-            <a href={lineUrl} target="_blank" rel="noreferrer" className="w-full sm:w-auto inline-flex justify-center items-center gap-2 bg-[#00B900] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#009900] transition shadow-md hover:shadow-lg">
-              <MessageCircle className="w-6 h-6" /> ปรึกษาผ่าน LINE ฟรี
-            </a>
-          </div>
+          <ShareButtons shareUrl={shareUrl} title={post.title} lineUrl={lineUrl} />
         </div>
       </div>
     </div>
